@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Admin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      padding: 20px;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.97);
+      padding: 40px 35px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    h1 { text-align: center; color: #1e3c72; margin-bottom: 25px; font-size: 24px; }
+    label { display: block; margin-bottom: 6px; color: #444; font-size: 14px; }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 18px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: border-color 0.2s;
+    }
+    input:focus { outline: none; border-color: #2a5298; }
+    button {
+      width: 100%;
+      padding: 13px;
+      background: #2a5298;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-weight: 600;
+    }
+    button:hover:not(:disabled) { background: #1e3c72; }
+    button:disabled { background: #888; cursor: not-allowed; }
+    .message {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 14px;
+      min-height: 20px;
+    }
+    .error { color: #d32f2f; }
+    .success { color: #388e3c; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 Admin Login</h1>
+    <form id="loginForm" autocomplete="off">
+      <label for="username">Username</label>
+      <input type="text" id="username" required autocomplete="username">
+
+      <label for="password">Password</label>
+      <input type="password" id="password" required autocomplete="current-password">
+
+      <button type="submit" id="submitBtn">Masuk</button>
+    </form>
+    <div class="message" id="message"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const msg = document.getElementById('message');
+    const btn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = '';
+      msg.className = 'message';
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          msg.textContent = '✅ Login berhasil! Mengalihkan...';
+          msg.className = 'message success';
+          form.reset();
+          setTimeout(async () => {
+            const dash = await fetch('/api/dashboard', { credentials: 'same-origin' });
+            const dashData = await dash.json();
+            if (dash.ok) {
+              document.querySelector('.container').innerHTML = `
+                <h1>🎉 Dashboard Admin</h1>
+                <p style="text-align:center;color:#444;line-height:1.6;">
+                  ${dashData.message}<br><br>
+                  <strong>User:</strong> ${dashData.user}
+                </p>
+                <button id="logoutBtn" style="margin-top:20px;">Logout</button>
+              `;
+              document.getElementById('logoutBtn').addEventListener('click', async () => {
+                await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+                location.reload();
+              });
+            }
+          }, 600);
+        } else {
+          msg.textContent = '❌ ' + (data.error || 'Login gagal');
+          msg.className = 'message error';
+        }
+      } catch (err) {
+        msg.textContent = '❌ Gagal terhubung ke server';
+        msg.className = 'message error';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Masuk';
+      }
+    });
+  </script>
+</body>
+</html>
